@@ -21,46 +21,68 @@ import java.util.logging.Logger;
 @WebServlet("/jms-test")
 public class JmsTestServlet extends HttpServlet {
 
-	static final String QUEUE_SEND_RESPONSE = "Sent a text message to ";
-	static final String QUEUE_TEXT_MESSAGE = "Hello Servlet!";
-	static final String QUEUE_COUNT_TEMPLATE = "browsed: %d messages";
-	static final String REQUEST_PRODUCE = "produce";
-	static final String REQUEST_COUNT = "count";
+    static final String QUEUE_SEND_RESPONSE = "Sent a text message to ";
+    static final String QUEUE_TEXT_MESSAGE = "Hello Servlet!";
+    static final String QUEUE_COUNT_TEMPLATE = "browsed: %d messages";
+    static final String QUEUE_RECEIVED_RESPONSE = "Received a text message %s from %s.";
+    static final String REQUEST_PRODUCE = "produce";
+    static final String REQUEST_COUNT = "count";
+    static final String REQUEST_CONSUME = "cosume";
 
-	private static final Logger LOGGER = Logger.getLogger(JmsTestServlet.class.toString());
+    private static final Logger LOGGER = Logger.getLogger(JmsTestServlet.class.toString());
 
-	@Resource(lookup = "java:/jms/queue/jmsBridgeSourceQueue")
-	private Queue queue;
+    @Resource(lookup = "java:/jms/queue/jmsBridgeSourceQueue")
+    private Queue queue;
 
-	@Inject()
-	private JMSContext context;
+    @Inject()
+    private JMSContext context;
 
-	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException {
-		resp.setContentType("text/html");
-		TextMessage textMessage;
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException {
+        resp.setContentType("text/html");
+        TextMessage textMessage;
 
-		String request = req.getParameter("request");
+        String request = req.getParameter("request");
+        String test = req.getParameter("test");
 
-		try (PrintWriter out = resp.getWriter()) {
-			switch (request) {
-				case REQUEST_PRODUCE:
-					// produce and send a text message to a queue
-					textMessage = context.createTextMessage(QUEUE_TEXT_MESSAGE);
-					context.createProducer().send(queue, textMessage);
-					out.println(QUEUE_SEND_RESPONSE + queue.toString());
-					break;
-				case REQUEST_COUNT:
-					// counts messages in the queue
-					out.println(String.format(QUEUE_COUNT_TEMPLATE,
-							Collections.list(context.createBrowser(queue).getEnumeration()).size()));
-					break;
-				default:
-					out.println("Usage: use <b>?produce</b> parameter to sent a message to test queue");
-			}
-		} catch (Exception error) {
-			LOGGER.log(Level.SEVERE, "Error sending message to jmsBridgeSourceQueue!", error);
-			throw new ServletException("Error sending message to jmsBridgeSourceQueue!", error);
-		}
-	}
+        LOGGER.log(Level.INFO, "\n\n==============================\n"
+                + "Received request: " + request + " test: " + test
+                + "\n==============================\n");
+        try (PrintWriter out = resp.getWriter()) {
+            switch (request) {
+                case REQUEST_PRODUCE:
+                    // produce and send a text message to a queue
+                    textMessage = context.createTextMessage(test != null ? test : QUEUE_TEXT_MESSAGE);
+                    context.createProducer().send(queue, textMessage);
+                    out.println(QUEUE_SEND_RESPONSE + queue.toString() + " " + test);
+                    LOGGER.log(Level.INFO, "\n\n==============================\n"
+                            + QUEUE_SEND_RESPONSE + queue.toString()
+                            + "\n==============================\n");
+                    break;
+                case REQUEST_COUNT:
+                    LOGGER.log(Level.INFO, "\n\n==============================\n"
+                            + String.format(QUEUE_COUNT_TEMPLATE,
+                                    Collections.list(context.createBrowser(queue).getEnumeration()).size())
+                            + "\n==============================\n");
+                    // counts messages in the queue
+                    out.println(String.format(QUEUE_COUNT_TEMPLATE,
+                            Collections.list(context.createBrowser(queue).getEnumeration()).size()));
+                    break;
+                case REQUEST_CONSUME:
+                    textMessage = (TextMessage) context.createConsumer(queue).receive(500);
+                    LOGGER.log(Level.INFO, "\n\n==============================\n"
+                            + String.format(QUEUE_RECEIVED_RESPONSE, textMessage.getText(),queue.toString())
+                            + "\n==============================\n");
+                    // counts messages in the queue
+                    out.println(String.format(QUEUE_COUNT_TEMPLATE,
+                            Collections.list(context.createBrowser(queue).getEnumeration()).size()));
+                    break;
+                default:
+                    out.println("Usage: use <b>?produce</b> parameter to sent a message to test queue");
+            }
+        } catch (Exception error) {
+            LOGGER.log(Level.SEVERE, "Error sending message to jmsBridgeSourceQueue!", error);
+            throw new ServletException("Error sending message to jmsBridgeSourceQueue!", error);
+        }
+    }
 }
