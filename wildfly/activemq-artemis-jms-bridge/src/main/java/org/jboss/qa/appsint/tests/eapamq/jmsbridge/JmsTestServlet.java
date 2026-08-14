@@ -2,6 +2,7 @@ package org.jboss.qa.appsint.tests.eapamq.jmsbridge;
 
 import jakarta.annotation.Resource;
 import jakarta.inject.Inject;
+import jakarta.jms.JMSConsumer;
 import jakarta.jms.JMSContext;
 import jakarta.jms.Queue;
 import jakarta.jms.TextMessage;
@@ -41,7 +42,7 @@ public class JmsTestServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException {
         resp.setContentType("text/html");
         TextMessage textMessage;
-        
+
         String request = req.getParameter("request");
         String test = req.getParameter("test");
 
@@ -69,14 +70,16 @@ public class JmsTestServlet extends HttpServlet {
                             Collections.list(context.createBrowser(queue).getEnumeration()).size()));
                     break;
                 case REQUEST_CONSUME:
-                    textMessage = (TextMessage) context.createConsumer(queue).receive(500);
+                    try (JMSConsumer consumer = context.createConsumer(queue)) {
+                        textMessage = (TextMessage) consumer.receive(500);
+                    }
                     LOGGER.log(Level.INFO, "\n\n==============================\n"
-                            + String.format(QUEUE_RECEIVED_RESPONSE, textMessage.getText(),queue.toString())
+                            + String.format(QUEUE_RECEIVED_RESPONSE, textMessage.getText(), queue.toString())
                             + "\n==============================\n");
                     // counts messages in the queue
-                    out.println(String.format(QUEUE_COUNT_TEMPLATE,
-                            Collections.list(context.createBrowser(queue).getEnumeration()).size()));
+                    out.println(String.format(QUEUE_RECEIVED_RESPONSE, textMessage.getText(), queue.toString()));
                     break;
+
                 default:
                     out.println("Usage: use <b>?produce</b> parameter to sent a message to test queue");
             }
