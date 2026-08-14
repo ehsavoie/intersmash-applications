@@ -27,7 +27,7 @@ public class JmsTestServlet extends HttpServlet {
     static final String QUEUE_RECEIVED_RESPONSE = "Received a text message %s from %s.";
     static final String REQUEST_PRODUCE = "produce";
     static final String REQUEST_COUNT = "count";
-    static final String REQUEST_CONSUME = "cosume";
+    static final String REQUEST_CONSUME = "consume";
 
     private static final Logger LOGGER = Logger.getLogger(JmsTestServlet.class.toString());
 
@@ -41,7 +41,7 @@ public class JmsTestServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException {
         resp.setContentType("text/html");
         TextMessage textMessage;
-
+        
         String request = req.getParameter("request");
         String test = req.getParameter("test");
 
